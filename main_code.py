@@ -11,7 +11,7 @@ WIDTH, HEIGHT = 600, 600
 GRID_SIZE = 20
 GRID_WIDTH = WIDTH // GRID_SIZE
 GRID_HEIGHT = HEIGHT // GRID_SIZE
-BASE_FPS = 10  # 改為基礎FPS
+BASE_FPS = 10  # 基礎FPS
 FPS = BASE_FPS  # 當前FPS
 
 # 顏色
@@ -98,9 +98,9 @@ def main():
 
     font = pygame.font.SysFont('simhei', 24)
 
-    # 加速相關變數
+    # 加速
     is_speeding = False
-    speed_multiplier = 1.2  # 加速倍率
+    speed_multiplier = 1.5  # 加速倍率
 
     while True:
         # 檢查按鍵狀態（持續按壓）
