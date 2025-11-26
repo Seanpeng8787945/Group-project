@@ -206,57 +206,100 @@ class Game:
                     self.save_highscore()
                     pygame.quit()
                     sys.exit()
-###                    
+                    
+        # 持續按鍵（加速）
+        keys = pygame.key.get_pressed()
+        if keys[pygame.K_LCTRL] or keys[pygame.K_RCTRL]:
+            self.set_speeding(True)
+        else:
+            self.set_speeding(False)
 
-        if not snake.move():
-            # 結束
-            game_over_text = font.render("Gameover ! (press R restart)", True, WHITE)
-            screen.blit(game_over_text, (WIDTH//2 - game_over_text.get_width()//2, HEIGHT//2))
-            pygame.display.update()
+    def restart(self):
+        self.snake.reset()
+        self.food.randomize_position(self.snake.body_set)
+        self.state = GameState.RUNNING
+        self.set_speeding(False)
+        self.last_move_time = pygame.time.get_ticks()
 
-            # 等重開
-            waiting = True
-            while waiting:
-                for event in pygame.event.get():
-                    if event.type == pygame.QUIT:
-                        pygame.quit()
-                        sys.exit()
-                    elif event.type == pygame.KEYDOWN and event.key == pygame.K_r:
-                        waiting = False
-                        snake = Snake()
-                        food.randomize_position()
-                        # 重置加速狀態
-                        FPS = BASE_FPS
-                        is_speeding = False
-            continue
+    def update_logic(self):
+        # 只在 RUNNING 狀態下更新遊戲邏輯
+        if self.state != GameState.RUNNING:
+            return
+
+        now = pygame.time.get_ticks()
+        if now - self.last_move_time < self.move_interval:
+            return  # 還沒到下一步
+        self.last_move_time = now
+
+        ok, reason = self.snake.move()
+        if not ok:
+            # 遊戲結束
+            self.state = GameState.GAMEOVER
+            # 更新最高分
+            if self.snake.score > self.highscore:
+                self.highscore = self.snake.score
+                self.save_highscore()
+            return
 
         # 吃到食物?
-        if snake.get_head_position() == food.position:
-            snake.grow()
+        if self.snake.get_head_position() == self.food.position:
+            self.snake.grow()
             food.randomize_position()
-            # 食物不生成在蛇身上
-            while food.position in snake.positions:
-                food.randomize_position()
+            # 重新生成食物（不在蛇身上）
+            self.food.randomize_position(self.snake.body_set)
 
-        screen.fill(BLACK)
-        snake.draw(screen)
-        food.draw(screen)
+    def draw_ui(self):
+        # 分數
+        score_text = self.font.render(f"score: {self.snake.score}", True, WHITE)
+        self.screen.blit(score_text, (10, 10))
 
-        # 計分
-        score_text = font.render(f"score: {snake.score}", True, WHITE)
-        screen.blit(score_text, (10, 10))
+        # 最高分
+        hs_text = self.font.render(f"highscore: {self.highscore}", True, WHITE)
+        self.screen.blit(hs_text, (10, 40))
 
-        # 顯示加速狀態
-        if is_speeding:
-            speed_text = font.render("SPEED BOOST!", True, YELLOW)
-            screen.blit(speed_text, (WIDTH//2 - speed_text.get_width()//2, 40))
+        # 加速狀態
+        if self.is_speeding:
+            speed_text = self.font.render("SPEED BOOST!", True, YELLOW)
+            self.screen.blit(speed_text, (WIDTH // 2 - speed_text.get_width() // 2, 10))
 
         # 提示
-        controls_text = font.render("WASD to move, CTRL to speed up, R to restart", True, WHITE)
-        screen.blit(controls_text, (WIDTH - controls_text.get_width() - 10, 10))
+        controls_text = self.font.render("WASD to move, CTRL to speed up, P pause, R restart", True, WHITE)
+        self.screen.blit(controls_text, (WIDTH - controls_text.get_width() - 10, 10))
 
-        pygame.display.update()
-        clock.tick(FPS)
+    def draw_gameover(self):
+        go_text = self.font.render("Game Over! Press R to restart", True, WHITE)
+        self.screen.blit(go_text, (WIDTH // 2 - go_text.get_width() // 2, HEIGHT // 2 - 20))
+
+    def run(self):
+        # 主迴圈：使用高頻率渲染，但邏輯以固定步進更新
+        self.last_move_time = pygame.time.get_ticks()
+        while True:
+            self.handle_events()
+
+            # 更新邏輯（固定步進）
+            self.update_logic()
+
+
+            # 繪製
+            self.screen.fill(BLACK)
+            self.snake.draw(self.screen)
+            self.food.draw(self.screen)
+            self.draw_ui()
+
+            if self.state == GameState.PAUSED:
+                pause_text = self.font.render("PAUSED (P to resume)", True, WHITE)
+                self.screen.blit(pause_text, (WIDTH // 2 - pause_text.get_width() // 2, HEIGHT // 2))
+            elif self.state == GameState.GAMEOVER:
+                self.draw_gameover()
+
+            pygame.display.update()
+            # 渲染 FPS（不等於邏輯FPS）
+            self.clock.tick(60)
+
+def main():
+    game = Game()
+    game.run()
+
 
 if __name__ == "__main__":
     main()
