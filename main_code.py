@@ -1,4 +1,3 @@
-
 import pygame
 import random
 import sys
@@ -73,8 +72,8 @@ class Snake:
         
         head = self.get_head_position()
         x, y = self.direction
-        new_x = head[0] + dx
-        new_y = head[1] + dy
+        new_x = head[0] + x
+        new_y = head[1] + y
         new_position = (new_x, new_y)
 
         # 檢查撞牆
@@ -84,19 +83,19 @@ class Snake:
         # 檢查自撞（尾巴會在非成長時被移除，所以先判斷）
         # 若新位置在 body_set 中且不是尾巴（在下一行會被移除）則自撞
         tail = None
-        if len(self.body)>= seld.length:
+        if len(self.body)>= self.length:
             tail = self.body[-1]
             
-        if new_position in self.body_set and new_positions != tail:
+        if new_position in self.body_set and new_position != tail:
             return False, "SELF"
 
         # 移動
-        self.positions.insert(0, new_position)
+        self.body.appendleft(new_position)
         self.body_set.add(new_position)
 
         # 最大長度限制（超過長度則刪尾）
-        if len(self.positions) > self.length:
-            removed = self.positions.pop()
+        if len(self.body) > self.length:
+            removed = self.body.pop()
             self.body_set.remove(removed)
 
         return True, "MOVED"
@@ -109,7 +108,7 @@ class Snake:
         self.__init__()
 
     def draw(self, surface):
-        for p in self.positions:
+        for p in self.body:
             rect = pygame.Rect((p[0] * GRID_SIZE, p[1] * GRID_SIZE), (GRID_SIZE, GRID_SIZE))
             pygame.draw.rect(surface, GREEN, rect)
             pygame.draw.rect(surface, BLACK, rect, 1)
@@ -135,23 +134,24 @@ class Food:
 
 class Game:
     def __init__(self):
-    self.screen = pygame.display.set_mode((WIDTH, HEIGHT))
-    pygame.display.set_caption("Snake - WASD to move, CTRL to speed up")
-    self.clock = pygame.time.Clock()
-    self.font = pygame.font.SysFont('simhei', 24)
+        self.screen = pygame.display.set_mode((WIDTH, HEIGHT))
+        pygame.display.set_caption("Snake - WASD to move, CTRL to speed up")
+        self.clock = pygame.time.Clock()
+        self.font = pygame.font.SysFont('simhei', 24)
     
-    self.snake = Snake()
-    self.food = Food()
+        self.snake = Snake()
+        self.food = Food()
 
-    self.state = GameState.RUNNING
-    self.is_speeding = False # 加速
-    self.speed_multiplier = 1.5  # 加速倍率
-    self.fps = BASE_FPS
-    self.last_move_time = 0  # 毫秒
-    self.move_interval = 1000 // self.fps  # 毫秒/步
-    self.highscore = self.load_highscore()
-    # 初始化食物位置，確保不在蛇身上
-    self.food.randomize_position(self.snake.body_set)
+        self.state = GameState.RUNNING
+        self.is_speeding = False # 加速
+        self.speed_multiplier = 1.5  # 加速倍率
+        self.base_fps = BASE_FPS
+        self.fps = self.base_fps
+        self.last_move_time = 0  # 毫秒
+        self.move_interval = 1000 // self.fps  # 毫秒/步
+        self.highscore = self.load_highscore()
+        # 初始化食物位置，確保不在蛇身上
+        self.food.randomize_position(self.snake.body_set)
     
     def load_highscore(self):
         try:
@@ -177,7 +177,7 @@ class Game:
         # 更新移動間隔（毫秒）
         self.move_interval = max(1, 1000 // self.fps)
 
-    def handle_event(self):
+    def handle_events(self):
         # 處理事件（鍵盤、視窗）
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
@@ -244,7 +244,6 @@ class Game:
         # 吃到食物?
         if self.snake.get_head_position() == self.food.position:
             self.snake.grow()
-            food.randomize_position()
             # 重新生成食物（不在蛇身上）
             self.food.randomize_position(self.snake.body_set)
 
